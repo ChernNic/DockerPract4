@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # Сервис для API (бэкенд-приложение)
+  api:
+    restart: always  # Контейнер будет автоматически перезапущен в случае сбоя
+    container_name: api  # Имя контейнера
+    build:
+      context: ./api  # Путь к директории с кодом API
+      dockerfile: Dockerfile  # Путь к Dockerfile для API
+    ports:
+      - "5555:5000"  # Проброс порта: 5000 в контейнере -> 5555 на хосте
+    depends_on:
+      - mysql  # API зависит от MySQL, будет ждать запуска MySQL перед началом работы
+    environment:
+      DB_HOST: mysql  # Имя хоста для подключения к базе данных (сервис mysql)
+      DB_PORT: 3306  # Порт для подключения к базе данных
+      DB_USER: root  # Имя пользователя базы данных
+      DB_PASSWORD: password  # Пароль для пользователя базы данных
+      DB_NAME: time_db  # Имя базы данных для API
+  
+  # Сервис для Frontend (фронтенд-приложение)
+  frontend:
+    restart: always  # Контейнер будет автоматически перезапущен в случае сбоя
+    container_name: frontend  # Имя контейнера
+    build:
+      context: ./frontend  # Путь к директории с кодом Frontend
+      dockerfile: Dockerfile  # Путь к Dockerfile для Frontend
+    ports:
+      - "8954:8954"  # Проброс порта: 8954 в контейнере -> 8954 на хосте
+    depends_on:
+      - api  # Frontend зависит от API, будет ждать запуска API перед началом работы
+  
+  # Сервис для MySQL базы данных
+  mysql:
+    restart: always  # Контейнер будет автоматически перезапущен в случае сбоя
+    container_name: mysql  # Имя контейнера
+    image: mysql:8.0  # Используем официальный образ MySQL версии 8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: password  # Пароль для пользователя root
+      MYSQL_DATABASE: time_db  # Имя базы данных, которая будет создана при старте контейнера
+    ports:
+      - "3306:3306"  # Проброс порта: 3306 в контейнере -> 3306 на хосте
+    volumes:
+      - mysql_data:/var/lib/mysql  # Данные MySQL сохраняются в volume, чтобы они не потерялись при перезапуске контейнера
+  
+  # Сервис для Adminer (интерфейс для работы с базой данных)
+  adminer:
+    restart: always  # Контейнер будет автоматически перезапущен в случае сбоя
+    container_name: adminer  # Имя контейнера
+    image: adminer  # Используем официальный образ Adminer
+    ports:
+      - "8122:8080"  # Проброс порта: 8080 в контейнере -> 8122 на хосте
+    depends_on:
+      - mysql  # Adminer зависит от MySQL, будет ждать запуска MySQL перед запуском
+
+# Сохранение данных MySQL в volume, чтобы данные не терялись при перезапуске контейнеров
+volumes:
+  mysql_data:
